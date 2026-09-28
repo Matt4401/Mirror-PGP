@@ -37,7 +37,7 @@ def test_parse_single_block_for_symmetric_systems(crypto_system):
 
 
 def test_parse_rsa_key_generation():
-    args = parse_input(["rsa", "-g", "17", "23"])
+    args = parse_input(["rsa", "-g", "11", "17"])
 
     assert args.crypto_system == "rsa"
     assert args.mode == "g"
