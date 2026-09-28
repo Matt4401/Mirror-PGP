@@ -112,7 +112,7 @@ def main():
             else:
                 ciphered = hex_to_bytes(raw_data.decode("ascii").strip())
                 result = process_rsa(ciphered, args.key, args.mode)
-                sys.stdout.buffer.write(result)
+                sys.stdout.buffer.write(result + b"\n")
             return
 
         key_bytes = hex_to_bytes(args.key)
