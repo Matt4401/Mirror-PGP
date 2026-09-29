@@ -9,6 +9,7 @@
 
 import sys
 
+from src.algorithms.pgp import pgp_decrypt, pgp_encrypt
 from src.parsing.parsing import parse_input
 from src.utils.endianness import hex_to_bytes, bytes_to_hex
 from src.utils.endianness import bytes_to_int, int_to_bytes
@@ -92,6 +93,17 @@ def process_xor(message: bytes, key: bytes, mode: str, single_block: bool) -> by
             output.append(out_b[::-1])
     return b"".join(output)
 
+def process_pgp(
+    raw_data: bytes,
+    key_str: str,
+    mode: str,
+    single_block: bool,
+    crypto_system: str,
+) -> tuple[str, str] | bytes:
+    symmetric_func = process_aes if crypto_system == "pgp-aes" else process_xor
+    if mode == "c":
+        return pgp_encrypt(raw_data, key_str, single_block, symmetric_func, process_rsa)
+    return pgp_decrypt(raw_data.decode("ascii").strip(), key_str, single_block, symmetric_func, process_rsa)
 
 def main():
     try:
