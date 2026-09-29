@@ -47,7 +47,7 @@ def process_rsa(message: bytes, key: str, mode: str) -> bytes:
     if value >= modulus:
         raise ValueError("message must be smaller than the RSA modulus")
     result = pow(value, exponent, modulus)
-    target_len = max(1, (modulus.bit_length() + 7) // 8)
+    target_len = max(1, (modulus.bit_length() + 7) // 8) if mode == "c" else max(1, (result.bit_length() + 7) // 8)
     return int_to_bytes(result, target_len)
 
 
