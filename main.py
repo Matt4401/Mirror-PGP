@@ -47,7 +47,8 @@ def process_rsa(message: bytes, key: str, mode: str) -> bytes:
     if value >= modulus:
         raise ValueError("message must be smaller than the RSA modulus")
     result = pow(value, exponent, modulus)
-    return int_to_bytes(result, max(1, (result.bit_length() + 7) // 8))
+    target_len = max(1, (modulus.bit_length() + 7) // 8) if mode == "c" else max(1, (result.bit_length() + 7) // 8)
+    return int_to_bytes(result, target_len)
 
 
 def process_aes(message: bytes, key: bytes, mode: str, single_block: bool) -> bytes:
@@ -55,10 +56,10 @@ def process_aes(message: bytes, key: bytes, mode: str, single_block: bool) -> by
     block_size = 16
 
     if single_block:
-        if len(message) != block_size:
-            raise ValueError(
-                f"In block mode (-b), message must be {block_size} bytes (got {len(message)})."
-            )
+        if len(message) > block_size:
+            message = message[:block_size]
+        elif len(message) < block_size:
+            message = pad_block(message, block_size)
         blocks = [message]
     else:
         blocks = split_into_blocks(message, block_size)
@@ -68,9 +69,9 @@ def process_aes(message: bytes, key: bytes, mode: str, single_block: bool) -> by
     output = []
     for b in blocks:
         if mode == "c":
-            output.append(aes_encrypt_block(b[::-1], key_schedule))
+            output.append(aes_encrypt_block(b, key_schedule))
         else:
-            output.append(aes_decrypt_block(b, key_schedule)[::-1])
+            output.append(aes_decrypt_block(b, key_schedule))
     return b"".join(output)
 
 
@@ -80,10 +81,10 @@ def process_xor(message: bytes, key: bytes, mode: str, single_block: bool) -> by
         raise ValueError("Key cannot be empty.")
 
     if single_block:
-        if len(message) != block_size:
-            raise ValueError(
-                f"In block mode (-b), message and key must have the same size ({block_size} bytes)."
-            )
+        if len(message) > block_size:
+            message = message[:block_size]
+        elif len(message) < block_size:
+            message = pad_block(message, block_size)
         blocks = [message]
     else:
         blocks = split_into_blocks(message, block_size)
@@ -129,7 +130,22 @@ def main():
             print(f"private key: {format_rsa_number(d)}-{format_rsa_number(n)}")
             return
 
+        if args.crypto_system == "rsa":
+            parse_rsa_key(args.key)
+        elif args.crypto_system in ("aes", "xor"):
+            key_bytes = hex_to_bytes(args.key)
+        elif args.crypto_system in ("pgp-xor", "pgp-aes"):
+            parts = args.key.split(":")
+            if len(parts) != 2:
+                raise ValueError("PGP key must be in the format symmetric_key:rsa_key")
+            hex_to_bytes(parts[0])
+            parse_rsa_key(parts[1])
+
         raw_data = sys.stdin.buffer.read()
+        if (args.single_block or args.crypto_system == "rsa") and raw_data.endswith(b"\n"):
+            raw_data = raw_data[:-1]
+            if raw_data.endswith(b"\r"):
+                raw_data = raw_data[:-1]
 
         if args.crypto_system == "rsa":
             if args.mode == "c":
@@ -139,6 +155,22 @@ def main():
                 ciphered = hex_to_bytes(raw_data.decode("ascii").strip())
                 result = process_rsa(ciphered, args.key, args.mode)
                 sys.stdout.buffer.write(result + b"\n")
+            return
+
+        if args.crypto_system in ("pgp-xor", "pgp-aes"):
+            if args.mode == "c":
+                ciphered_key, ciphered_msg = process_pgp(
+                    raw_data, args.key, args.mode, args.single_block, args.crypto_system
+                )
+                print(ciphered_key)
+                print(ciphered_msg)
+            else:
+                result = process_pgp(
+                    raw_data, args.key, args.mode, args.single_block, args.crypto_system
+                )
+                if not args.single_block:
+                    result = result.rstrip(b"\x00")
+                sys.stdout.buffer.write(result + b"\n" if args.single_block else result)
             return
 
         key_bytes = hex_to_bytes(args.key)
@@ -159,7 +191,9 @@ def main():
         if args.mode == "c":
             print(bytes_to_hex(result))
         else:
-            sys.stdout.buffer.write(result)
+            if not args.single_block:
+                result = result.rstrip(b"\x00")
+            sys.stdout.buffer.write(result + b"\n" if args.single_block else result)
 
     except Exception as e:
         sys.stderr.write(f"Error: {e}\n")

@@ -221,3 +221,9 @@ __marimo__/
 
 G-CNA-500_mypgp.pdf
 G-CNA-500-my_pgp.pdf
+ciphered
+message
+tests/pgp_test.py
+tests/subject_test.py
+my_pgp
+compare_aes.py
