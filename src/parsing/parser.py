@@ -12,11 +12,10 @@ from .valids_options import CRYPTO_SYSTEMS, SYMMETRIC_SYSTEMS
 
 
 def parse_prime(value: str) -> int:
-    try:
-        return int(value, 0)
-    except ValueError:
-        return int(value, 16)
-
+	try:
+		return int.from_bytes(bytes.fromhex(value), "little")
+	except ValueError:
+		raise argparse.ArgumentTypeError(f"invalid hexadecimal number: {value}")
 
 class MyArgumentParser(argparse.ArgumentParser):
     def error(self, message):
