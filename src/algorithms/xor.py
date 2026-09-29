@@ -5,6 +5,7 @@
 ## xor
 ##
 
+
 def xor(data: bytes, key: bytes) -> bytes:
     """
     XORs the data with the key.

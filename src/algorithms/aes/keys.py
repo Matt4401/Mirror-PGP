@@ -7,17 +7,20 @@
 
 from .constants import SBOX, RCON
 
+
 def rot_words(word: bytes) -> bytes:
     """
     Rotate a word (4 bytes) to the left by one byte.
     """
     return word[1:] + word[:1]
 
+
 def sub_word(word: bytes) -> bytes:
     """
     Substitute each byte in a word (4 bytes) using the S-Box.
     """
     return bytes(SBOX[b] for b in word)
+
 
 def keys_expansion(key: bytes) -> list[bytes]:
     """
@@ -27,7 +30,7 @@ def keys_expansion(key: bytes) -> list[bytes]:
 
     Nk = len(key) // 4
     Nr = Nk + 6
-    expanded_keys = [key[i:i+4] for i in range(0, len(key), 4)]
+    expanded_keys = [key[i : i + 4] for i in range(0, len(key), 4)]
 
     for i in range(Nk, (Nr + 1) * 4):
         temp = expanded_keys[i - 1]
