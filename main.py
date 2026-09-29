@@ -9,6 +9,7 @@
 
 import sys
 
+from src.algorithms.pgp import pgp_decrypt, pgp_encrypt
 from src.parsing.parsing import parse_input
 from src.utils.endianness import hex_to_bytes, bytes_to_hex
 from src.utils.endianness import bytes_to_int, int_to_bytes
@@ -24,7 +25,9 @@ def parse_rsa_key(key: str) -> tuple[int, int]:
     if len(parts) != 2 or not all(parts):
         raise ValueError("RSA key must have the format exponent-modulus")
     try:
-        return bytes_to_int(bytes.fromhex(parts[0])), bytes_to_int(bytes.fromhex(parts[1]))
+        return bytes_to_int(bytes.fromhex(parts[0])), bytes_to_int(
+            bytes.fromhex(parts[1])
+        )
     except ValueError as error:
         raise ValueError("RSA key must contain hexadecimal numbers") from error
 
@@ -53,7 +56,9 @@ def process_aes(message: bytes, key: bytes, mode: str, single_block: bool) -> by
 
     if single_block:
         if len(message) != block_size:
-            raise ValueError(f"In block mode (-b), message must be {block_size} bytes (got {len(message)}).")
+            raise ValueError(
+                f"In block mode (-b), message must be {block_size} bytes (got {len(message)})."
+            )
         blocks = [message]
     else:
         blocks = split_into_blocks(message, block_size)
@@ -76,7 +81,9 @@ def process_xor(message: bytes, key: bytes, mode: str, single_block: bool) -> by
 
     if single_block:
         if len(message) != block_size:
-            raise ValueError(f"In block mode (-b), message and key must have the same size ({block_size} bytes).")
+            raise ValueError(
+                f"In block mode (-b), message and key must have the same size ({block_size} bytes)."
+            )
         blocks = [message]
     else:
         blocks = split_into_blocks(message, block_size)
@@ -88,9 +95,28 @@ def process_xor(message: bytes, key: bytes, mode: str, single_block: bool) -> by
         if mode == "c":
             output.append(xor(b[::-1], key))
         else:
-            out_b = xor(b, key[:len(b)]) if len(b) < block_size else xor(b, key)
+            out_b = xor(b, key[: len(b)]) if len(b) < block_size else xor(b, key)
             output.append(out_b[::-1])
     return b"".join(output)
+
+
+def process_pgp(
+    raw_data: bytes,
+    key_str: str,
+    mode: str,
+    single_block: bool,
+    crypto_system: str,
+) -> tuple[str, str] | bytes:
+    symmetric_func = process_aes if crypto_system == "pgp-aes" else process_xor
+    if mode == "c":
+        return pgp_encrypt(raw_data, key_str, single_block, symmetric_func, process_rsa)
+    return pgp_decrypt(
+        raw_data.decode("ascii").strip(),
+        key_str,
+        single_block,
+        symmetric_func,
+        process_rsa,
+    )
 
 
 def main():
@@ -126,7 +152,9 @@ def main():
         elif args.crypto_system == "xor":
             result = process_xor(message_bytes, key_bytes, args.mode, args.single_block)
         else:
-            raise NotImplementedError(f"Crypto system '{args.crypto_system}' is not implemented yet.")
+            raise NotImplementedError(
+                f"Crypto system '{args.crypto_system}' is not implemented yet."
+            )
 
         if args.mode == "c":
             print(bytes_to_hex(result))

@@ -12,7 +12,7 @@ from .valids_options import SYMMETRIC_SYSTEMS
 from .parser import build_parser
 
 
-@dataclass(frozen=True) # just to make it secure
+@dataclass(frozen=True)  # just to make it secure
 class ParsedArguments:
     """Validated command-line arguments."""
 
