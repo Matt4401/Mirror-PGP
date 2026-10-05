@@ -52,6 +52,9 @@ def process_rsa(message: bytes, key: str, mode: str) -> bytes:
 
 
 def process_aes(message: bytes, key: bytes, mode: str, single_block: bool) -> bytes:
+    key = b"".join(key[i:i+4][::-1] for i in range(0, len(key), 4))
+    if mode == "d":
+        message = b"".join(message[i:i+4][::-1] for i in range(0, len(message), 4))
     key_schedule = keys_expansion(key)
     block_size = 16
 
@@ -72,7 +75,10 @@ def process_aes(message: bytes, key: bytes, mode: str, single_block: bool) -> by
             output.append(aes_encrypt_block(b, key_schedule))
         else:
             output.append(aes_decrypt_block(b, key_schedule))
-    return b"".join(output)
+    result = b"".join(output)
+    if mode == "c":
+        result = b"".join(result[i:i+4][::-1] for i in range(0, len(result), 4))
+    return result
 
 
 def process_xor(message: bytes, key: bytes, mode: str, single_block: bool) -> bytes:
