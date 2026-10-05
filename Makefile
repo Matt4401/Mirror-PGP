@@ -2,7 +2,7 @@ NAME    = my_pgp
 
 all: $(NAME)
 
-$(NAME):
+$(NAME): main.py
 	cp main.py $(NAME)
 	chmod +x $(NAME)
 
