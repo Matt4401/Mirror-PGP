@@ -10,7 +10,9 @@ import pytest
 from src.parsing.parsing import parse_input
 
 
-@pytest.mark.parametrize("crypto_system", ["xor", "aes", "rsa", "pgp-xor", "pgp-aes"])
+@pytest.mark.parametrize(
+    "crypto_system", ["xor", "aes", "rsa", "X25519", "pgp-xor", "pgp-aes"]
+)
 def test_parse_cipher_mode_for_each_crypto_system(crypto_system):
     args = parse_input([crypto_system, "-c", "mykey"])
 
@@ -46,6 +48,23 @@ def test_parse_rsa_key_generation():
     assert args.primes == (17, 23)
 
 
+def test_parse_x25519_key_generation():
+    args = parse_input(["X25519", "-g"])
+
+    assert args.crypto_system == "X25519"
+    assert args.mode == "g"
+    assert args.key is None
+    assert args.primes == ()
+
+
+@pytest.mark.parametrize("mode", ["-c", "-d"])
+def test_parse_uppercase_x25519_message_modes(mode):
+    args = parse_input(["X25519", mode, "mykey"])
+
+    assert args.crypto_system == "X25519"
+    assert args.mode == mode[1:]
+
+
 @pytest.mark.parametrize(
     "arguments",
     [
@@ -57,6 +76,10 @@ def test_parse_rsa_key_generation():
         ["aes", "-c", "key", "-d"],
         ["xor", "-g", "17", "23"],
         ["rsa", "-g", "17"],
+        ["X25519", "-g", "17", "23"],
+        ["x25519", "-g"],
+        ["x25519", "-c", "key"],
+        ["x25519", "-d", "key"],
         ["rsa", "-g", "17", "23", "key"],
         ["rsa", "-c", "key", "-b"],
     ],
