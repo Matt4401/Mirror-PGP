@@ -35,9 +35,12 @@ def _mode_from_namespace(arguments):
 def _validate_arguments(arguments, parser):
     mode = _mode_from_namespace(arguments)
 
-    # Careful RSA only for g
-    if mode == "g" and arguments.crypto_system != "rsa":
-        parser.error("-g can only be used with the rsa crypto system")
+    if mode == "g" and arguments.crypto_system not in ("rsa", "X25519"):
+        parser.error("-g can only be used with the rsa or X25519 crypto system")
+    if mode == "g" and arguments.crypto_system == "rsa" and len(arguments.primes) != 2:
+        parser.error("-g for rsa requires exactly two prime numbers")
+    if mode == "g" and arguments.crypto_system == "X25519" and arguments.primes:
+        parser.error("-g for X25519 does not accept prime numbers")
     if mode == "g" and arguments.key is not None:
         parser.error("a key cannot be used with -g")
 

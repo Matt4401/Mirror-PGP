@@ -60,10 +60,10 @@ def build_parser():
     modes.add_argument(
         "-g",
         dest="primes",
-        nargs=2,
-        metavar=("P", "Q"),
+        nargs="*",
+        metavar="P/Q",
         type=parse_prime,
-        help="RSA only: don't read a MESSAGE, but instead generate a public and private key pair from the prime number P and Q",
+        help="RSA: generate a key pair from P and Q; X25519: generate a key pair",
     )
     parser.add_argument(
         "-b", dest="single_block", action="store_true", help="process one block only"
