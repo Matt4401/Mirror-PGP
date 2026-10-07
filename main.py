@@ -18,6 +18,9 @@ from src.algorithms.aes.keys import keys_expansion
 from src.algorithms.aes.core import aes_encrypt_block, aes_decrypt_block
 from src.algorithms.xor import xor
 from src.algorithms.rsa.core import rsa_key_values
+from src.algorithms.x25519.core import decrypt as x25519_decrypt
+from src.algorithms.x25519.core import encrypt as x25519_encrypt
+from src.algorithms.x25519.core import generate_keypair
 
 
 def parse_rsa_key(key: str) -> tuple[int, int]:
@@ -49,6 +52,16 @@ def process_rsa(message: bytes, key: str, mode: str) -> bytes:
     result = pow(value, exponent, modulus)
     target_len = max(1, (modulus.bit_length() + 7) // 8) if mode == "c" else max(1, (result.bit_length() + 7) // 8)
     return int_to_bytes(result, target_len)
+
+
+def parse_x25519_key(key: str) -> bytes:
+    try:
+        key_bytes = bytes.fromhex(key)
+    except ValueError as error:
+        raise ValueError("X25519 keys must be hexadecimal") from error
+    if len(key_bytes) != 32:
+        raise ValueError("X25519 keys must be exactly 32 bytes (64 hexadecimal characters)")
+    return key_bytes
 
 
 def process_aes(message: bytes, key: bytes, mode: str, single_block: bool) -> bytes:
@@ -131,13 +144,20 @@ def main():
         args = parse_input()
 
         if args.mode == "g":
-            n, e, d = rsa_key_values(args.primes)
-            print(f"public key: {format_rsa_number(e)}-{format_rsa_number(n)}")
-            print(f"private key: {format_rsa_number(d)}-{format_rsa_number(n)}")
+            if args.crypto_system == "rsa":
+                n, e, d = rsa_key_values(args.primes)
+                print(f"public key: {format_rsa_number(e)}-{format_rsa_number(n)}")
+                print(f"private key: {format_rsa_number(d)}-{format_rsa_number(n)}")
+            else:
+                private_key, public_key = generate_keypair()
+                print(f"public key: {public_key.hex()}")
+                print(f"private key: {private_key.hex()}")
             return
 
         if args.crypto_system == "rsa":
             parse_rsa_key(args.key)
+        elif args.crypto_system == "X25519":
+            parse_x25519_key(args.key)
         elif args.crypto_system in ("aes", "xor"):
             key_bytes = hex_to_bytes(args.key)
         elif args.crypto_system in ("pgp-xor", "pgp-aes"):
@@ -161,6 +181,14 @@ def main():
                 ciphered = hex_to_bytes(raw_data.decode("ascii").strip())
                 result = process_rsa(ciphered, args.key, args.mode)
                 sys.stdout.buffer.write(result + b"\n")
+            return
+
+        if args.crypto_system == "X25519":
+            key = parse_x25519_key(args.key)
+            if args.mode == "c":
+                sys.stdout.buffer.write(x25519_encrypt(raw_data, key))
+            else:
+                sys.stdout.buffer.write(x25519_decrypt(raw_data, key))
             return
 
         if args.crypto_system in ("pgp-xor", "pgp-aes"):
